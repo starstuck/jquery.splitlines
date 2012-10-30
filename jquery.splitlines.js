@@ -44,6 +44,8 @@
 				while (node.parentNode !== parent) {
 					if (!node.parentNode.nextSibling) {
 						node = node.parentNode;
+					} else {
+						break;
 					}
 				}
 				if (node) {
@@ -73,7 +75,7 @@
 			if (offset < node.nodeValue.length) {
 				result = new Pointer(node, offset);
 			} else {
-				result = getNextCharPointer(node.nextSibling, parent);
+				result = getNext();
 			}
 			break;
 		default:
@@ -97,18 +99,26 @@
 	}
 
 	/**
+	 * @returns wrapping EL
+	 */
+	function wrapRange(range) {
+		var wrapEl = document.createElement('span');
+		wrapEl.className = 'line';
+		range.surroundContents(wrapEl);
+		return wrapEl;
+	}
+
+	/**
 	 * Traverse through each character and wrap each line once you notice that
 	 * range bounding box is growing in height
 	 */
-    function splitLines(k, el) {
+    function splitLines(el) {
         var range = document.createRange(),
 			endPointer = new Pointer(el, 0),
 			traverseParent = el,
-			html = '',
-			startTag = '<span class="line">',
-			endTag = '</span>',
 			lastPointer,
-			lineHeight;
+			lineHeight,
+			hasLines;
 
 		// Make sure last pointer is pointing to character in text node
 		if (endPointer.node.nodeType !== 3) {
@@ -120,16 +130,13 @@
 
 			// If line height is growing, then wrap range up to last characte
 			if (lineHeight && (getRangeHeight(range) > lineHeight)) {
+				// Select range up to last character
 				setRangeEnd(range, lastPointer);
-				html += startTag + range + endTag;
 
-				// Commented out variant with live dom manipulation
-				//wrapEl = document.createElement('span');
-				//wrapEl.className = 'line';
-				//range.surroundContents(wrapEl);
-				//endPointer = new Pointer(wrapEl.nextSibling, 0);
-
-				setRangeStart(range, lastPointer);
+				// Wrap it and move to first node after new element
+				hasLines = true;
+				endPointer = new Pointer(wrapRange(range).nextSibling, 0);
+				setRangeStart(range, endPointer);
 				lineHeight = 0;
 			}
 
@@ -138,6 +145,9 @@
 			endPointer = getNextCharPointer(lastPointer, traverseParent);
 			if (endPointer) {
 				setRangeEnd(range, endPointer);
+			} else {
+				// If last character is selected, move range to whole string
+				range.setEnd(el, el.childNodes.length);
 			}
 
 			// Empty line height means, that it is first iteration within new line.
@@ -147,21 +157,36 @@
 			}
 		}
 
+		if (hasLines) {
+			// Wrap if there is not empty range left
+			if (range.toString()) {
+				wrapRange(range);
+			}
+			$(el).addClass('has-lines');
+		}
+
 		// Detach range to save resources
 		range.detach();
-
-		// Update html
-		if (html) {
-			if (range.toString()) {
-				html += startTag + range + endTag;
-			}
-			$(el)
-				.html(html)
-				.addClass('has-lines');
-		}
     }
 
+	/**
+	 * Try to iterate through each element.
+	 *
+	 * Report errors, but do not brake the loop, so elements not caousing problems
+	 * will still get split
+	 */
+	function interate(k, el) {
+		try {
+			splitLines(el);
+		} catch (err) {
+			if (window.console) {
+				console.error(err);
+				console.debug(el.innerHTML);
+			}
+		}
+	}
+
     $.fn.splitLines = function () {
-        return this.each(splitLines);
+        return this.each(interate);
     };
 }(jQuery));
