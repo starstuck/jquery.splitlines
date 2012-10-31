@@ -1,14 +1,22 @@
-/**
-* @preserve jQUery.splitlines 0.1.0 - jQUery plugin to split lines within single tag in placesehre browser brakes line
-* Available via MIT license.
-* See http://github.com/szarsti/jquery.splitlines for details.
-*/
+/*!
+ * jQUery.splitlines 0.1.1 - jQUery plugin to split lines within single tag in placesehre browser brakes line
+ * Available via MIT license.
+ * See http://github.com/szarsti/jquery.splitlines for details.
+ */
 
-/*global document, jQuery*/
+/*global window, document, jQuery*/
 
 (function ($) {
 	"use strict";
 
+	/**
+	 * Internal object beeing reference to character/node in dom tree
+	 *
+	 * @private
+	 * @constructor
+	 * @param {Node} node
+	 * @param {Number} offset
+	 */
 	function Pointer(node, offset) {
 		this.node = node;
 		this.offset = offset;
@@ -19,9 +27,16 @@
 	/**
 	 * Get next character within parent element
 	 *
-	 * Returns null if there are no more characters within parent
+	 * Returns null if there are no more characters within top node
+	 *
+	 * @private
+	 * @param {Pointer/Node} pointer Pointer to node, or node
+	 * @param {Node} [top] top most node of search. Once search goes through all characters inside this element, ti will return null.
+	 * @param {Boolean} [upOnly=false] If true, traversing will
+	 * @return {Pointer} Next Character pointer or null, when reached last character
 	 */
-	function getNextCharPointer(pointer, parent) {
+	function getNextCharPointer(pointer, top, upOnly) {
+		// Methd may get called with null pointer in recursion, when it reach branch end
 		if (!pointer) {
 			return null;
 		}
@@ -30,59 +45,45 @@
 			offset = pointer.isPointer ? pointer.offset : 0,
 			result;
 
-		if (!parent) {
-			parent = node;
-		}
-
-		function getNext() {
-			var result;
-			if (node.nextSibling) {
-				// Try to get sibling
-				result = getNextCharPointer(node.nextSibling, parent);
-			} else {
-				// Or go up to first parent siblingsibling
-				while (node.parentNode !== parent) {
-					if (!node.parentNode.nextSibling) {
-						node = node.parentNode;
-					} else {
-						break;
-					}
-				}
-				if (node) {
-					result = getNextCharPointer(node.parentNode.nextSibling, parent);
-				}
-			}
-			return result;
+		if (!top) {
+			top = node;
 		}
 
 		switch (node.nodeType) {
-		case (1): // If it is element, find first inner, or go to next sibling
-			node = node.childNodes[offset];
-			if (node.nodeType === 3) {
-				result = new Pointer(node, 0);
-			} else {
-				if (node.childNodes.length) {
-					// Try going down the tree
-					result = getNextCharPointer(node, parent);
-				} else {
-					result = getNext();
-				}
+		case (1):
+			// If there is child to explore, go ther
+			if (!upOnly && node.childNodes[offset]) {
+				return getNextCharPointer(node.childNodes[offset], top);
 			}
-			break;
+			// If top node is reached, there is nothing more to go
+			if (node === top) {
+				return null;
+			}
+			// Try exploring siblings if any
+			if (node.nextSibling) {
+				return getNextCharPointer(node.nextSibling, top);
+			}
+			// Only options left it to try searching futher above parent, withour recursing down the tree
+			return getNextCharPointer(node.parentNode, top, true);
 		case (3): // If it is text node
 		case (4): // Or CDATA node
 			offset += 1;
 			if (offset < node.nodeValue.length) {
-				result = new Pointer(node, offset);
-			} else {
-				result = getNext();
+				return new Pointer(node, offset);
 			}
-			break;
+			// If no characters left, tru continuing in sibling node, or parent
+			//return getNextCharPointer(node.nextSibling || new, top);
 		default:
-			result = getNext();
+			pointer.node = node.parentNode;
+			pointer.node
 		}
 
-		return result;
+		// Move forward to next sibling
+		if (node.nextSibling) {
+			return getNextCharPointer(node.nextSibling, top);
+		}
+		// If all sibling are traversed start moving up
+		return getNextCharPointer(node.parentNode, top, true);
 	}
 
 	function getRangeHeight(range) {
@@ -99,7 +100,9 @@
 	}
 
 	/**
-	 * @returns wrapping EL
+	 * @private
+	 * @param {Range} document range, which will be wrapped
+	 * @returns {Element} wrapping element
 	 */
 	function wrapRange(range) {
 		var wrapEl = document.createElement('span');
@@ -111,6 +114,8 @@
 	/**
 	 * Traverse through each character and wrap each line once you notice that
 	 * range bounding box is growing in height
+	 *
+	 * @param {Element} el
 	 */
     function splitLines(el) {
         var range = document.createRange(),
@@ -174,6 +179,10 @@
 	 *
 	 * Report errors, but do not brake the loop, so elements not caousing problems
 	 * will still get split
+	 *
+	 * @private
+	 * @param {Number} k The key in iteration array
+	 * @param {Element} el
 	 */
 	function interate(k, el) {
 		try {
@@ -181,7 +190,6 @@
 		} catch (err) {
 			if (window.console) {
 				console.error(err);
-				console.debug(el.innerHTML);
 			}
 		}
 	}
