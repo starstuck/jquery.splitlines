@@ -1,5 +1,5 @@
 /*!
- * jQUery.splitlines 0.1.1 - jQUery plugin to split lines within single tag in placesehre browser brakes line
+ * jQUery.splitlines 0.1.2 - jQUery plugin to split lines within single tag in placesehre browser brakes line
  * Available via MIT license.
  * See http://github.com/szarsti/jquery.splitlines for details.
  */
@@ -51,9 +51,14 @@
 
 		switch (node.nodeType) {
 		case (1):
-			// If there is child to explore, go ther
+			// If there is child to explore, go there
 			if (!upOnly && node.childNodes[offset]) {
-				return getNextCharPointer(node.childNodes[offset], top);
+				// If the chid is text node, use 0 index of it
+				node = node.childNodes[offset];
+				if (node.nodeType == 3 || node.nodeType == 4) {
+					return new Pointer(node, 0);
+				}
+				return getNextCharPointer(node, top);
 			}
 			// If top node is reached, there is nothing more to go
 			if (node === top) {

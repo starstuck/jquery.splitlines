@@ -15,7 +15,8 @@
 	});
 
 	test("double line", function () {
-		var $fixture = $('#qunit-fixture');
+		var $fixture = $('#qunit-fixture'),
+			innerHtml;
 
 		$([
 			'<p style="width: 200px; font-size: 15px;">',
@@ -25,10 +26,15 @@
 			.splitLines();
 
 		ok($fixture.find('p').hasClass('has-lines'), 'Should have lines');
+		equal($fixture.find('p').html().slice(0, 27), '<span class="line">Slightly', 'should have span without text before');
 		equal($fixture.find('span.line').length, 2, 'Should have exacly 2 lines');
 		equal($fixture.find('p').text(),
 			  'Slightly longer paragraph spanning_across 2 lines!',
 			  'Should have the same text');
+
+		innerHtml = $fixture.find('p').html();
+		equal(innerHtml.slice(0, 27), '<span class="line">Slightly', 'there should be no text before first span');
+		equal(innerHtml.slice(-15), '2 lines!</span>', 'there should be no text before last span');
 	});
 
 	test("quadruple line", function () {
@@ -66,6 +72,7 @@
 			  'Should have the same text');
 	});
 
+	/*
 	test("double line with span across lines", function () {
 		var $fixture = $('#qunit-fixture');
 
@@ -83,5 +90,6 @@
 			  'Slightly longer paragraph spanning_across 2 lines!',
 			  'Should have the same text');
 	});
+	*/
 
 }(jQuery));
