@@ -1,5 +1,5 @@
 /*!
- * jQUery.splitlines 0.1.2 - jQUery plugin to split lines within single tag in placesehre browser brakes line
+ * jQUery.splitlines 0.1.3 - jQUery plugin to split lines within single tag in placesehre browser brakes line
  * Available via MIT license.
  * See http://github.com/szarsti/jquery.splitlines for details.
  */
@@ -8,6 +8,8 @@
 
 (function ($) {
 	"use strict";
+
+	var splitLinesImpl;
 
 	/**
 	 * Internal object beeing reference to character/node in dom tree
@@ -55,7 +57,7 @@
 			if (!upOnly && node.childNodes[offset]) {
 				// If the chid is text node, use 0 index of it
 				node = node.childNodes[offset];
-				if (node.nodeType == 3 || node.nodeType == 4) {
+				if (node.nodeType === 3 || node.nodeType === 4) {
 					return new Pointer(node, 0);
 				}
 				return getNextCharPointer(node, top);
@@ -76,11 +78,12 @@
 			if (offset < node.nodeValue.length) {
 				return new Pointer(node, offset);
 			}
-			// If no characters left, tru continuing in sibling node, or parent
+			// If no characters left, then continue in next parent
 			//return getNextCharPointer(node.nextSibling || new, top);
+			pointer.node = node.parentNode;
+			break;
 		default:
 			pointer.node = node.parentNode;
-			pointer.node
 		}
 
 		// Move forward to next sibling
@@ -122,7 +125,7 @@
 	 *
 	 * @param {Element} el
 	 */
-    function splitLines(el) {
+    function splitLinesUsingRange(el) {
         var range = document.createRange(),
 			endPointer = new Pointer(el, 0),
 			traverseParent = el,
@@ -179,6 +182,52 @@
 		range.detach();
     }
 
+
+	function splitLinesUsingSpan(el) {
+		var html = $(el).html(),
+			lines = [],
+			lineWidth = 0,
+			lastOffset = null,
+			line = [],
+			words,
+			word,
+			i,
+			l;
+
+		html = '<span class="sl-word">' + $(el).html().split(/\s+/).join('</span> <span class="sl-word">') + '</span>';
+		words = $(el).html(html).find('.sl-word');
+
+		for (i = 0, l = words.length; i < l; i += 1) {
+			word = words[i];
+			if (lastOffset !== null && word.offsetTop !== lastOffset) {
+				lines.push(line.join(' '));
+				line = [];
+			}
+			line.push(word.innerHTML);
+			lastOffset = word.offsetTop;
+		}
+		if (line.length) {
+			lines.push(line.join(' '));
+		}
+
+		if (lines.length > 1) {
+			$(el).addClass('has-lines').html(
+				'<span class="line">' + lines.join('</span> <span class="line">') + '</span>'
+			);
+		} else {
+			$(el).html(lines[0]);
+		}
+	}
+
+
+	// Choose right split lines implementations depending on browser features
+	if (typeof document.createRange === 'function') {
+		splitLinesImpl = splitLinesUsingRange;
+	} else {
+		splitLinesImpl = splitLinesUsingSpan;
+	}
+
+
 	/**
 	 * Try to iterate through each element.
 	 *
@@ -189,9 +238,9 @@
 	 * @param {Number} k The key in iteration array
 	 * @param {Element} el
 	 */
-	function interate(k, el) {
+	function splitLinesInEl(k, el) {
 		try {
-			splitLines(el);
+			splitLinesImpl(el);
 		} catch (err) {
 			if (window.console) {
 				console.error(err);
@@ -200,6 +249,6 @@
 	}
 
     $.fn.splitLines = function () {
-        return this.each(interate);
+        return this.each(splitLinesInEl);
     };
 }(jQuery));
