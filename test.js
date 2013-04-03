@@ -82,7 +82,24 @@
 			  'Should have the same text');
 	});
 
-	/*
+	test("double line with hidden span arround last word", function () {
+		var $fixture = $('#qunit-fixture');
+
+		$([
+			'<p style="width: 200px; font-size: 15px;">',
+			'Slightly longer paragraph spanning_across 2 lines! <span class="accessibility" style="display: inline-block; width: 1px; height: 1px; text-indent: -999px">[invisible multi-line text]</span>',
+			'</p>'].join(''))
+			.appendTo($fixture)
+			.splitLines();
+
+		ok($fixture.find('p').hasClass('has-lines'), 'Should have lines');
+		equal($fixture.find('p span.line').length, 2, 'Should have exacly 2 lines');
+		equal($fixture.find('p span.accessibility').text(), '[invisible multi-line text]', 'Should keep markup');
+		equal($fixture.find('p').text(),
+			  'Slightly longer paragraph spanning_across 2 lines! [invisible multi-line text]',
+			  'Should have the same text');
+	});
+
 	test("double line with span across lines", function () {
 		var $fixture = $('#qunit-fixture');
 
@@ -100,6 +117,5 @@
 			  'Slightly longer paragraph spanning_across 2 lines!',
 			  'Should have the same text');
 	});
-	*/
 
 }(jQuery));

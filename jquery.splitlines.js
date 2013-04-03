@@ -54,36 +54,27 @@
 		switch (node.nodeType) {
 		case (1):
 			// If there is child to explore, go there
-			if (!upOnly && node.childNodes[offset]) {
-				// If the chid is text node, use 0 index of it
-				node = node.childNodes[offset];
-				if (node.nodeType === 3 || node.nodeType === 4) {
-					return new Pointer(node, 0);
-				}
-				return getNextCharPointer(node, top);
-			}
-			// If top node is reached, there is nothing more to go
 			if (node === top) {
+				if (!upOnly && node.childNodes[offset]) {
+					// If the chid is text node, use 0 index of it
+					node = node.childNodes[offset];
+					if (node.nodeType === 3 || node.nodeType === 4) {
+						return new Pointer(node, 0);
+					}
+					//return getNextCharPointer(node.nextSibling, top);
+					return getNextCharPointer(node, top);
+				}
+				// If top node is reached, there is nothing more to go
 				return null;
 			}
-			// Try exploring siblings if any
-			if (node.nextSibling) {
-				return getNextCharPointer(node.nextSibling, top);
-			}
-			// Only options left it to try searching futher above parent, withour recursing down the tree
-			return getNextCharPointer(node.parentNode, top, true);
+			break;
 		case (3): // If it is text node
 		case (4): // Or CDATA node
 			offset += 1;
 			if (offset < node.nodeValue.length) {
 				return new Pointer(node, offset);
 			}
-			// If no characters left, then continue in next parent
-			//return getNextCharPointer(node.nextSibling || new, top);
-			pointer.node = node.parentNode;
 			break;
-		default:
-			pointer.node = node.parentNode;
 		}
 
 		// Move forward to next sibling
